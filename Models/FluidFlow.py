@@ -65,13 +65,14 @@ from fluids.fittings import *
 
 
 class FluidFlow:
-    def __init__(self, D, v_len, mod_width, mod_height, C=150):
-        self.D = D
+    def __init__(self, D_co, v_len, mod_width, mod_height, C=150):
+        self.D_co = D_co
         self.v_len = v_len
         self.mod_width = mod_width
         self.mod_height = mod_height
         self.C = C
         self.n_units, self. h_len, self.v_len, self.TP_len = self.module_config()
+        self.v = self.velocity()
 
     def module_config(self):
         '''
@@ -81,11 +82,11 @@ class FluidFlow:
         v_len = length of vertical section of pipe
         '''
         try:
-            assert self.v_len > self.D
+            assert self.v_len > self.D_co
         except:
             print('\nv_len is too short, redefining v_len as D+0.01 and continuing calculation...')
-            self.v_len = self.D + 0.01
-        h_len = self.mod_width - self.D
+            self.v_len = self.D_co + 0.01
+        h_len = self.mod_width - self.D_co
         unit_len = h_len + self.v_len
         num_units = np.floor(self.mod_height / self.v_len)
         total_pipe_len = (num_units * unit_len)
@@ -94,8 +95,8 @@ class FluidFlow:
 
     def velocity(self):
         # calculate fluid velocity with the HazenWilliams Equation
-        A = (self.D/2)**2 * np.pi
-        P = 2 * np.pi * (self.D/2)
+        A = (self.D_co/2)**2 * np.pi
+        P = 2 * np.pi * (self.D_co/2)
         k = 0.849
         hydR = A / P
         S = (self.n_units * self.v_len) / self.TP_len
@@ -103,11 +104,11 @@ class FluidFlow:
         return self.v
 
     def volume(self):
-        self.vol = self.D * self. TP_len
+        self.vol = self.D_co * self. TP_len
         return self.vol
 
     def reynolds_num(self):
-        Re = fluids.Reynolds(self.v, D=self.D, rho=997, mu=0.00038)
+        Re = fluids.Reynolds(self.v, D=self.D_co, rho=997, mu=0.00038)
         return Re
 
     def prandtl_num(self):
