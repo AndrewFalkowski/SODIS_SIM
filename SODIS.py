@@ -11,9 +11,61 @@ from tqdm import tqdm
 import numpy as np
 import itertools
 
+
 #%%
 
-D_in = np.arange(0.001,0.051, 0.001)
+# single model param prediction
+
+D_in = 0.001
+v_len = 0.15
+T_in = 315
+
+model_params = {
+    'D_ri': D_in, # meters
+    'D_ro': D_in+(D_in*0.1), # meters
+    'D_ci': D_in+(D_in*0.2), # meters
+    'D_co': D_in+(D_in*0.3), # meters
+    'mod_width': 1.0, # meters
+    'mod_height': 1.0, # meters
+    'tilt' : 0,
+    'v_len': v_len,
+    'date': '2021-07-15',
+    'time': '13:05:00',
+    'Tam':298,
+}
+
+mp = pd.Series(model_params)
+
+CSI = ClearSkyIrradiance()
+irrad_total = CSI.get_irradiance(date=mp.date, tilt=mp.tilt, surface_azimuth=180)
+mp['Irr'] = CSI.irrad_at_time(mp.date, mp.time)['GHI']
+
+# calculate pretreatment module
+
+FF = FluidFlow(D_co=mp.D_co, D_ri=mp.D_ri, v_len=mp.v_len, mod_width=mp.mod_width, mod_height=mp.mod_height)
+mp['tube_vol'] = FF.volume()
+mp['Re'] = FF.reynolds_num()/2
+mp['Pr'] = FF.prandtl_num()
+mp['n_tube_units'] = FF.n_units
+mp['total_tube_len'] = FF.TP_len
+mp['V'] = FF.velocity()
+
+mp = build_mirror(mp) # update model parameters with mirror info
+
+
+TT = TubeThermal(TP_len=mp.total_tube_len, v_len = mp.v_len, n_tube_units=mp.n_tube_units,
+                 mod_width=mp.mod_width, D_ri=mp.D_ri, D_ro=mp.D_ro, D_ci=mp.D_ci,
+                 D_co=mp.D_co, T_am=mp.Tam, Irr=mp.Irr, V=mp.V, T_in=T_in, Re=mp.Re, Pr=mp.Pr,
+                 Wa=mp.Wa, C=mp.C)
+
+prop = TT.thermal_prop
+
+
+#%%
+
+# method for iterating over many possible combinations of parameters
+
+D_in = np.arange(0.001,0.051, 0.01)
 v_lens = np.arange(0.01, 0.401, 0.01)
 combs = itertools.product(D_in, v_lens)
 combs_len = len(list(combs))
@@ -44,7 +96,7 @@ for i, params in tqdm(enumerate(itertools.product(D_in, v_lens)), total=combs_le
 
     # calculate pretreatment module
 
-    FF = FluidFlow(D_co=mp.D_co, v_len=mp.v_len, mod_width=mp.mod_width, mod_height=mp.mod_height)
+    FF = FluidFlow(D_co=mp.D_co, D_ri=mp.D_ri, v_len=mp.v_len, mod_width=mp.mod_width, mod_height=mp.mod_height)
     mp['tube_vol'] = FF.volume()
     mp['Re'] = FF.reynolds_num()/2
     mp['Pr'] = FF.prandtl_num()

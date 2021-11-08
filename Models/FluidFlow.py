@@ -65,8 +65,9 @@ from fluids.fittings import *
 
 
 class FluidFlow:
-    def __init__(self, D_co, v_len, mod_width, mod_height, C=150):
+    def __init__(self, D_co, D_ri, v_len, mod_width, mod_height, C=150):
         self.D_co = D_co
+        self.D_ri = D_ri
         self.v_len = v_len
         self.mod_width = mod_width
         self.mod_height = mod_height
@@ -95,8 +96,8 @@ class FluidFlow:
 
     def velocity(self):
         # calculate fluid velocity with the HazenWilliams Equation
-        A = (self.D_co/2)**2 * np.pi
-        P = 2 * np.pi * (self.D_co/2)
+        A = (self.D_ri/2)**2 * np.pi
+        P = 2 * np.pi * (self.D_ri/2)
         k = 0.849
         hydR = A / P
         S = (self.n_units * self.v_len) / self.TP_len
@@ -104,11 +105,11 @@ class FluidFlow:
         return self.v
 
     def volume(self):
-        self.vol = self.D_co * self. TP_len
+        self.vol = self.D_ri * self.TP_len
         return self.vol
 
     def reynolds_num(self):
-        Re = fluids.Reynolds(self.v, D=self.D_co, rho=997, mu=0.00038)
+        Re = fluids.Reynolds(self.v, D=self.D_ri, rho=997, mu=0.00038)
         return Re
 
     def prandtl_num(self):
