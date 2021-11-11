@@ -6,19 +6,28 @@ from Models.BoxThermal import BoxThermal
 from Models.SolarIrradiance import ClearSkyIrradiance
 from Models.FluidFlow import FluidFlow
 from Utils.utils import build_mirror
+from BoxThermal import *
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
 import itertools
-
+from scipy.integrate import odeint
 
 #%%
 
 # single model param prediction
 
+m_f, m_a, A_s = box_dim(0.25, 0.15, 0.9) # calculate relavent box info
+x0 = [298, 298, 298, 298, 298] # initial conditions for box receiver
+
+# calculate pretreatment module
+
+
+
+
 D_in = 0.001
-v_len = 0.15
-T_in = 315
+v_len = 0.14
+T_in = 298
 
 model_params = {
     'D_ri': D_in, # meters
@@ -26,7 +35,7 @@ model_params = {
     'D_ci': D_in+(D_in*0.2), # meters
     'D_co': D_in+(D_in*0.3), # meters
     'mod_width': 1.0, # meters
-    'mod_height': 1.0, # meters
+    'mod_height': 0.75, # meters
     'tilt' : 0,
     'v_len': v_len,
     'date': '2021-07-15',
@@ -39,28 +48,54 @@ mp = pd.Series(model_params)
 CSI = ClearSkyIrradiance()
 irrad_total = CSI.get_irradiance(date=mp.date, tilt=mp.tilt, surface_azimuth=180)
 mp['Irr'] = CSI.irrad_at_time(mp.date, mp.time)['GHI']
+trange = np.arange(0,1440,1)
+irrad_total.index = trange
 
-# calculate pretreatment module
+Touts = np.zeros_like(Tf, dtype='float64')
+for i,t in enumerate(trange):
+    mp['Irr'] = irrad_total['GHI'].loc[t]
 
-FF = FluidFlow(D_co=mp.D_co, D_ri=mp.D_ri, v_len=mp.v_len, mod_width=mp.mod_width, mod_height=mp.mod_height)
-mp['tube_vol'] = FF.volume()
-mp['Re'] = FF.reynolds_num()/2
-mp['Pr'] = FF.prandtl_num()
-mp['n_tube_units'] = FF.n_units
-mp['total_tube_len'] = FF.TP_len
-mp['V'] = FF.velocity()
+# calculate fluid flow
 
-mp = build_mirror(mp) # update model parameters with mirror info
+    FF = FluidFlow(D_co=mp.D_co, D_ri=mp.D_ri, v_len=mp.v_len, mod_width=mp.mod_width, mod_height=mp.mod_height)
+    mp['tube_vol'] = FF.volume()
+    mp['Re'] = FF.reynolds_num()/2
+    mp['Pr'] = FF.prandtl_num()
+    mp['n_tube_units'] = FF.n_units
+    mp['total_tube_len'] = FF.TP_len
+    mp['V'] = FF.velocity()
 
-
-TT = TubeThermal(TP_len=mp.total_tube_len, v_len = mp.v_len, n_tube_units=mp.n_tube_units,
-                 mod_width=mp.mod_width, D_ri=mp.D_ri, D_ro=mp.D_ro, D_ci=mp.D_ci,
-                 D_co=mp.D_co, T_am=mp.Tam, Irr=mp.Irr, V=mp.V, T_in=T_in, Re=mp.Re, Pr=mp.Pr,
-                 Wa=mp.Wa, C=mp.C)
-
-prop = TT.thermal_prop
+    mp = build_mirror(mp) # update model parameters with mirror info
 
 
+    TT = TubeThermal(TP_len=mp.total_tube_len, v_len = mp.v_len, n_tube_units=mp.n_tube_units,
+                     mod_width=mp.mod_width, D_ri=mp.D_ri, D_ro=mp.D_ro, D_ci=mp.D_ci,
+                     D_co=mp.D_co, T_am=mp.Tam, Irr=mp.Irr, V=mp.V, T_in=T_in, Re=mp.Re, Pr=mp.Pr,
+                     Wa=mp.Wa, C=mp.C)
+
+    Touts[i] = TT.thermal_prop.T_out - 298
+    # prop = TT.thermal_prop
+#%%
+
+t = np.linspace(0,63000,900)
+Tf = odeint(boxODE,x0, t, args=(m_f, m_a, A_s))[:,4]
+before = 298 * np.ones((330,))
+Tf = np.insert(Tf, 0, before)
+after = 293.251 * np.ones(((1440 - len(Tf)),))
+Tf = np.append(Tf, after)
+
+#heat decay control
+td = np.arange(720,1440,1)
+y = 0.02*np.cos(0.0043633*td)+1.02
+decay = np.insert(y, 0, np.ones(720,))
+Tf = Tf * decay
+Tf[1190:1440] = 302.4
+
+plt.plot((trange / 60),((Tf+Touts)))
+plt.plot((trange / 60),Tf)
+plt.plot((trange / 60),Touts+298)
+plt.hlines(338, -10,1500, color='k')
+plt.xlim(0,24)
 #%%
 
 # method for iterating over many possible combinations of parameters

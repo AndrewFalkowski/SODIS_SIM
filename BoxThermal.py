@@ -9,41 +9,39 @@ from scipy.integrate import odeint
 
 # a sample differential equation dy/dx = (x-y)/2
 
-def dydx(x,y):
-    return ((x-y)/2)
+# def dydx(x,y):
+#     return ((x-y)/2)
 
-# find the value of y for a given x using step size h
-# and an initial value y0 at x0
+# # find the value of y for a given x using step size h
+# # and an initial value y0 at x0
 
-def rungeKutta(x0, y0, x, h):
-    #count num iteratings using step size or step height h
-    n = int(((x - x0)/h))
-    # iterate for number of iterations
-    y = y0
-    for i in range(1, n + 1):
-        # apply runge kutta formulas to find the next value of y
-        k1 = h * dydx(x0, y)
-        k2 = h * dydx(x0 + 0.5 * h, y + 0.5 * k1)
-        k3 = h * dydx(x0 + 0.5 * h, y + 0.5 * k2)
-        k4 = h * dydx(x0 + h, y + k3)
+# def rungeKutta(x0, y0, x, h):
+#     #count num iteratings using step size or step height h
+#     n = int(((x - x0)/h))
+#     # iterate for number of iterations
+#     y = y0
+#     for i in range(1, n + 1):
+#         # apply runge kutta formulas to find the next value of y
+#         k1 = h * dydx(x0, y)
+#         k2 = h * dydx(x0 + 0.5 * h, y + 0.5 * k1)
+#         k3 = h * dydx(x0 + 0.5 * h, y + 0.5 * k2)
+#         k4 = h * dydx(x0 + h, y + k3)
 
-        # update the next value of y
-        y = y + (1.0 / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
+#         # update the next value of y
+#         y = y + (1.0 / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
 
-        # update the next value of x
-        x0 = x0 + h
+#         # update the next value of x
+#         x0 = x0 + h
 
-    return y
+#     return y
 
 
-# driver method
-x0 = 0
-y = 1
-x = 2
-h = 0.2
-print('The value of y at x is:', rungeKutta(x0, y, x, h))
-
-#%%
+# # driver method
+# x0 = 0
+# y = 1
+# x = 2
+# h = 0.2
+# print('The value of y at x is:', rungeKutta(x0, y, x, h))
 
 def box_dim(A_c, h, prct_f):
     # all dimensions in meters
@@ -55,7 +53,7 @@ def box_dim(A_c, h, prct_f):
     A_s = 4 * h * np.sqrt(A_c)
     return m_f, m_a, A_s
 
-m_f, m_a, A_s = box_dim(0.25, 0.15, 0.9)
+# m_f, m_a, A_s = box_dim(0.25, 0.15, 0.9)
 
 
 def boxODE(x, t, m_f, m_a, A_s):
@@ -68,28 +66,30 @@ def boxODE(x, t, m_f, m_a, A_s):
     T_sky = T_amb - 6 # kelvin
     alpha_g = 0.02 # %
     alpha_p = 0.98
-    t_g = 0.85 # %
+    t_g = 0.9 # %
     t_f = 0.85 # %
-    Irr = 0.0426*(t+27000) + 1.38E-6*(t+27000)**2 - 7.94E-11*(t+27000)**3 + 7.3E-16*(t+27000)**4
+    # print(t)
+    Irr = 0.0426*(t) + 1.38E-6*(t)**2 - 7.94E-11*(t)**3 + 7.3E-16*(t)**4
     # Irr = 600
     x_b = 0.065 # insulation thickness meters
     x_s = 0.065 # insulation thickness meters
 
     k_i = 1.0 # thermal conductivity of side materials, foamed glass # W/mK
-    h_rad_g2_g1 = 10
-    h_cov_g2_g1 = 5
-    h_rad_g1_sky = 10
-    h_rad_g1_amb = 10
-    h_rad_p_g2 = 25
-    h_cov_a_g2 = 10
-    h_cov_f_a = 10
-    h_cov_p_f = 20
-    h_cov_g1_amb = 100
+    h_rad_g2_g1 = 8
+    h_cov_g2_g1 = 20
+    h_rad_g1_sky = 8
+    h_rad_g1_amb = 8
+    h_rad_p_g2 = 20
+    h_cov_a_g2 = 8
+    h_cov_f_a = 8
+    h_cov_p_f = 30
+    h_cov_g1_amb = 65
 
     M_f = m_f * 4.187
     M_g1 = 1150 * (A_c * 0.001) * 1.67 # assuming acrylic
     M_g2 = M_g1
-    M_p = 8960 * (A_c * 0.065) * 0.5 # assuming coper
+    M_p = 8960 * (A_c * 0.065) * 1.0
+    # assuming coper
     M_a = 0.718 * m_a
 
     # assign each ODE to a vector element
@@ -118,62 +118,63 @@ def boxODE(x, t, m_f, m_a, A_s):
     dT_g2dt = (Irr * alpha_g * t_g * A_c + Q_rad_p_g2 + Q_cov_a_g2 - Q_rad_g2_g1) / M_g2
     dT_adt = (Q_cov_f_a - Q_cov_a_g2)/M_a
     dT_pdt = (Irr * alpha_p * t_g**2 * t_f * A_c - Q_rad_p_g2 - Q_amb_loss - Q_cov_p_f) / M_p
-    dT_fdt = (Q_cov_p_f - Q_cov_f_a) / M_f
+    dT_fdt = (Q_cov_p_f +  Q_cov_f_a) / M_f
 
     return [dT_g1dt, dT_g2dt, dT_adt, dT_pdt, dT_fdt]
 
-x0 = [298, 298, 298, 298, 280]
+# x0 = [298, 298, 298, 298, 285]
 
 
-# test the defined ODES
+# # test the defined ODES
 # print(boxODE(x=x0, t=0, m_f=m_f, m_a=m_a, A_s=A_s))
 
 
-# declare a time vector (time window)
-t = np.linspace(0,27000,1000)
-x = odeint(boxODE,x0,t, args=(m_f, m_a, A_s))
+# # declare a time vector (time window)
+# t = np.linspace(0,54000,1000)
+# x = odeint(boxODE,x0,t, args=(m_f, m_a, A_s))
 
-Tf_2 = x[:,4]
-Tp = x[:,3]
+# Tf= x[:,4]
+# Tp = x[:,3]
 
-# plot the results
-plt.plot((t/3600)+5.8,Tf_2, label='fluid')
-# plt.plot(t/3600,Tp, label='plate')
-plt.legend()
-plt.ylim(298, 338)
-plt.show()
-
-#%%
-
-xs = np.arange(27000,28201,1)
-ys = 0.0226*xs - 295
+# # plot the results
+# plt.plot((t/3600)+5.8,Tf_2, label='fluid')
+# # plt.plot(t/3600,Tp, label='plate')
+# plt.legend()
+# plt.ylim(298, 340)
+# plt.xlim(0,24)
+# plt.show()
 
 #%%
 
-fig = plt.figure(figsize=(5,5))
-fig, ax1 = plt.subplots()
+# xs = np.arange(27000,28201,1)
+# ys = 0.0226*xs - 295
 
-plt.plot((t/3600)+5.8,Tf, color='r')
-plt.plot(xs/3600 + 5.8, ys, color='r')
-plt.plot(np.arange(27000,27601,1)/3600+5.8, )
-plt.hlines(338, -100, 100, linestyle=':', color='k')
-plt.text(6.5, 339, 'Pasteurization Temperature')
+# #%%
 
-ax1.tick_params(direction='in', length=7,top=True, right=True, left=True)
-minor_locator_x = AutoMinorLocator(2)
-minor_locator_y = AutoMinorLocator(2)
-ax1.get_xaxis().set_minor_locator(minor_locator_x)
-ax1.get_yaxis().set_minor_locator(minor_locator_y)
-# rotate and align the tick labels so they look better
-plt.tick_params(which='minor',
-                direction='in',
-                length=4,
-                right=True,
-                left=True,
-                top=True)
-plt.xlim(6,21)
-plt.xlabel('Hour of Day')
-plt.ylim(298, 350)
-plt.ylabel('Water Temperature (K)')
+# fig = plt.figure(figsize=(5,5))
+# fig, ax1 = plt.subplots()
 
-plt.savefig('Figures/comb_img.png', dpi=300)
+# plt.plot((t/3600)+5.8,Tf, color='r')
+# plt.plot(xs/3600 + 5.8, ys, color='r')
+# plt.plot(np.arange(27000,27601,1)/3600+5.8, )
+# plt.hlines(338, -100, 100, linestyle=':', color='k')
+# plt.text(6.5, 339, 'Pasteurization Temperature')
+
+# ax1.tick_params(direction='in', length=7,top=True, right=True, left=True)
+# minor_locator_x = AutoMinorLocator(2)
+# minor_locator_y = AutoMinorLocator(2)
+# ax1.get_xaxis().set_minor_locator(minor_locator_x)
+# ax1.get_yaxis().set_minor_locator(minor_locator_y)
+# # rotate and align the tick labels so they look better
+# plt.tick_params(which='minor',
+#                 direction='in',
+#                 length=4,
+#                 right=True,
+#                 left=True,
+#                 top=True)
+# plt.xlim(6,21)
+# plt.xlabel('Hour of Day')
+# plt.ylim(298, 350)
+# plt.ylabel('Water Temperature (K)')
+
+# plt.savefig('Figures/comb_img.png', dpi=300)
